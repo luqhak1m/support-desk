@@ -11,12 +11,12 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.*" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\SupportDesk.Domain\SupportDesk.Domain.csproj" />
+    <ProjectReference Include="..\SupportDesk.Infrastructure\SupportDesk.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>
