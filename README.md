@@ -5,7 +5,6 @@
 - Email       : luq3973@gmail.com
 - Phone       : 013-287 4100
 - Date        : 09/09/2026
-- GitHub Repo : https://github.com/luqhak1m/support-desk.git
 
 
 ---
