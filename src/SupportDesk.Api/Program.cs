@@ -31,6 +31,12 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+using(IServiceScope scope=app.Services.CreateScope())
+{
+    SupportDeskDbContext db=scope.ServiceProvider.GetRequiredService<SupportDeskDbContext>();
+    DbSeeder.Seed(db);
+}
+
 app.UseCors("Angular");
 
 app.UseHttpsRedirection();
