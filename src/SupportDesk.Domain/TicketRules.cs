@@ -74,8 +74,8 @@ and a Closed ticket can never be reopened.*/
                 return createdAt.AddDays(7);
             
             default:
-                Console.WriteLine($"[CalculateDueDate] invalid parameter: {priority}");
-                throw new ArgumentOutOfRangeException(nameof(priority));
+                // Console.WriteLine($"[CalculateDueDate] invalid parameter: {priority}");
+                throw new ArgumentOutOfRangeException($"[CalculateDueDate()] invalid parameter: {nameof(priority)}");
         }
     }
 

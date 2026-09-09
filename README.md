@@ -158,6 +158,15 @@ receive a stack trace.
   ambiguity around the due-date calculation.
 - **The list of currently allowed transitions is computed on the server** and returned as part
   of the ticket response, so the UI can offer only legal actions without duplicating the rules.
+- **Reopening a ticket clears `ResolvedAt`.** The specification does not say what happens to the
+  resolved date when a ticket goes from Resolved back to In Progress. Since rule 6 makes the
+  system the owner of that field, leaving a stale value would misreport the ticket's current
+  state, so it is cleared on reopening.
+- **`Ticket.Reference` is generated outside the domain.** Producing `TCK-2026-0001` requires
+  knowing about other tickets, which means a database query. The domain has no database access
+  by design, so the reference is generated in the API layer and passed into the constructor.
+- **`AvailableTransitions()` accounts for rule 3, not just rule 2.** In Progress is only offered
+  when an active agent is assigned, so the UI never presents an action that the API would reject.
 - **No authentication.** Not requested, and out of scope for the time available.
 
 ## Design decisions
@@ -174,6 +183,14 @@ receive a stack trace.
 - **`switch` over if/else chains** for the rule methods, so each enum member appears explicitly —
   `case TicketStatus.Closed:` documents that the terminal state was considered rather than
   forgotten.
+- **`ChangeStatus` was not split into separate validate/apply/stamp methods.** At around twenty
+  lines it reads top to bottom as guard, apply, stamp; splitting it would mean jumping between
+  three methods to follow one operation. The one piece that *was* extracted, `HasActiveAgent()`,
+  was extracted because it has two callers — the guard and `AvailableTransitions()` — so the
+  rule stays in a single place.
+- **Every mutating method takes `now` as a parameter** rather than calling `DateTime.UtcNow`
+  internally. This is what makes the due-date and timestamp rules testable without waiting for
+  real time to pass.
 
 ---
 
