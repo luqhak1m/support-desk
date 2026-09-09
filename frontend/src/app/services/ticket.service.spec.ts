@@ -13,47 +13,45 @@ describe('TicketService',()=>{
     TestBed.configureTestingModule({
       providers:[provideHttpClient(),provideHttpClientTesting()]
     });
-
     service=TestBed.inject(TicketService);
     httpMock=TestBed.inject(HttpTestingController);
   });
 
-  afterEach(()=>{
-    httpMock.verify();
-  });
+  afterEach(()=>httpMock.verify());
 
-  it('sends filters to the server as query parameters, not filtering on the client',()=>{
+  // Catches the two things the brief is strict about: filtering done in the
+  // browser instead of on the server, and a status change folded into a
+  // generic update instead of its own endpoint.
+  it('filters on the server and changes status through its own endpoint',()=>{
     const empty:PagedResult<TicketListItem>={items:[],page:1,pageSize:10,totalCount:0,totalPages:0};
 
     service.getTickets({
-      page:2,
-      pageSize:10,
-      search:'login',
-      status:'New',
-      priority:'High',
-      overdueOnly:true
+      page:2,pageSize:25,search:'login',status:'New',
+      priority:'High',agentId:3,overdueOnly:true
     }).subscribe();
 
-    const request=httpMock.expectOne(r=>r.url==='http://localhost:5116/api/tickets');
+    const list=httpMock.expectOne(r=>r.url==='http://localhost:5116/api/tickets');
+    expect(list.request.method).toBe('GET');
+    expect(list.request.params.get('page')).toBe('2');
+    expect(list.request.params.get('search')).toBe('login');
+    expect(list.request.params.get('status')).toBe('New');
+    expect(list.request.params.get('priority')).toBe('High');
+    expect(list.request.params.get('agentId')).toBe('3');
+    expect(list.request.params.get('overdueOnly')).toBe('true');
+    list.flush(empty);
 
-    expect(request.request.method).toBe('GET');
-    expect(request.request.params.get('page')).toBe('2');
-    expect(request.request.params.get('search')).toBe('login');
-    expect(request.request.params.get('status')).toBe('New');
-    expect(request.request.params.get('priority')).toBe('High');
-    expect(request.request.params.get('overdueOnly')).toBe('true');
+    // filters that are not set must not be sent as blanks, or the API
+    // would treat an empty string as a real filter
+    service.getTickets({page:1,pageSize:10}).subscribe();
+    const bare=httpMock.expectOne(r=>r.url==='http://localhost:5116/api/tickets');
+    expect(bare.request.params.has('search')).toBeFalse();
+    expect(bare.request.params.has('status')).toBeFalse();
+    bare.flush(empty);
 
-    request.flush(empty);
-  });
-
-  it('posts a status change to the dedicated status endpoint',()=>{
     service.changeStatus(7,'Resolved').subscribe();
-
-    const request=httpMock.expectOne('http://localhost:5116/api/tickets/7/status');
-
-    expect(request.request.method).toBe('POST');
-    expect(request.request.body).toEqual({status:'Resolved'});
-
-    request.flush({});
+    const status=httpMock.expectOne('http://localhost:5116/api/tickets/7/status');
+    expect(status.request.method).toBe('POST');
+    expect(status.request.body).toEqual({status:'Resolved'});
+    status.flush({});
   });
 });

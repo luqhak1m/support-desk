@@ -1,65 +1,58 @@
+
 # Support Desk
 
-Name  : Luqman Hakim bin Noorazmi
-Email : luq3973@gmail.com
-Phone : 013-287 4100
-Date  : 09/09/2026
+- Name        : Luqman Hakim bin Noorazmi
+- Email       : luq3973@gmail.com
+- Phone       : 013-287 4100
+- Date        : 09/09/2026
+- GitHub Repo : https://github.com/luqhak1m/support-desk.git
 
-Internal tool for tracking customer support tickets from report to closure.
-ASP.NET Core Web API (.NET 8) + Entity Framework Core + PostgreSQL, with an Angular 18 frontend.
 
 ---
 
-## How to run (Local)
+## How to run it
 
-### Prerequisites
+You need .NET 8, Node 20 or newer, and PostgreSQL.
 
-- .NET 8 SDK
-- Node 20+
-- PostgreSQL 14+
-- EF Core CLI, pinned to 8.x to match the runtime packages:
-  ```
-  dotnet tool install --global dotnet-ef --version '8.*'
-  ```
+### 1. Database
 
-### DB
-
-Create an empty database, then let migrations build the schema:
+Create an empty database:
 
 ```
 createdb supportdesk
 ```
 
-Connection string lives in `src/SupportDesk.Api/appsettings.Development.json`:
+The connection string is in `src/SupportDesk.Api/appsettings.Development.json`:
 
 ```
 Host=localhost;Port=5433;Database=supportdesk;Username=dimex
 ```
 
-> **Note on the port.** This was developed against PostgreSQL on port **5433**, because
-> port 5432 was already taken by an unrelated container on the dev machine. If your
-> Postgres is on the default port, change `Port=5433` to `Port=5432` in
-> `appsettings.Development.json` before running migrations.
+I built this against PostgreSQL on port 5433, because port 5432 was already
+taken on my machine. If your PostgreSQL runs on the normal port change
+`Port=5433` to `Port=5432` before you continue. You may also need to change
+the username to your own.
 
-Apply migrations and seed data:
+Install the database tool and create the tables:
 
 ```
+dotnet tool install --global dotnet-ef --version '8.*'
 dotnet ef database update -p src/SupportDesk.Infrastructure -s src/SupportDesk.Api
 ```
 
-The seed data is applied automatically and includes 5 agents and 20 tickets across
-different statuses and priorities, including several overdue ones.
-
-### Backend
+### 2. Backend
 
 ```
 dotnet run --project src/SupportDesk.Api
 ```
 
-- API: http://localhost:5116
-- Swagger UI: http://localhost:5116/swagger
+The API runs at http://localhost:5116 and Swagger is at http://localhost:5116/swagger.
 
-### Frontend
+The first time it starts it fills the database with sample data: 5 agents and
+20 tickets. The tickets cover every status and priority, and six of them are
+already overdue so you can see the highlighting straight away.
+
+### 3. Frontend
 
 ```
 cd frontend
@@ -67,147 +60,156 @@ npm install
 npm start
 ```
 
-- App: http://localhost:4200
+The app runs at http://localhost:4200. Leave the backend running as well.
 
-### Tests
+### 4. Tests
 
 ```
-dotnet test                      # backend
-cd frontend && npx ng test       # frontend
+dotnet test                      # 4 backend tests
+cd frontend && npx ng test       # 2 frontend tests
 ```
 
 ---
 
-## Where the business rules live, and why
+## Where I put the business rules
 
-All business rules are in **`SupportDesk.Domain`**, which has **no package references at all** —
-no Entity Framework, no ASP.NET Core, nothing. This is deliberate and it is the main
-structural decision in the solution.
+All seven rules are in one project called `SupportDesk.Domain`.
 
-The project layout is three layers, with dependencies pointing inward only:
+That project does not know about the database or the web. It has no other code
+attached to it at all. Everything else is built on top of it:
 
 ```
-SupportDesk.Api             →  HTTP: controllers, DTOs, exception handling
-        ↓
-SupportDesk.Infrastructure  →  Persistence: DbContext, EF configuration, migrations
-        ↓
-SupportDesk.Domain          →  Business rules. Depends on nothing.
-        ↑
-SupportDesk.Domain.Tests    →  Tests the rules with no database and no web host
+SupportDesk.Api             the web endpoints
+        |
+SupportDesk.Infrastructure  saves and loads from the database
+        |
+SupportDesk.Domain          the rules
 ```
 
-The test for whether a rule is in the right place: **if it can be tested without starting a
-web server or a database, it is in the right place.** Every rule below meets that test —
-`SupportDesk.Domain.Tests` references only `SupportDesk.Domain`.
+I used a simple test to decide where a rule belongs. If I can test the rule
+without starting a website or a database, it is in the right place. All seven
+rules pass that test. The test project only knows about the rules project, and
+the tests run in a few milliseconds.
 
-Because `SupportDesk.Domain.csproj` has an empty `<ItemGroup>`, this separation is enforced
-by the compiler rather than by convention. EF Core cannot leak into the domain by accident.
+The main reason I did it this way is that rules get lost when they are spread
+around. If the rule for changing a status lives inside a web endpoint, then the
+next person who adds a second endpoint has to remember to copy it. Keeping the
+rules in one place means there is only ever one copy.
 
-### Rule placement
+### Each rule and where it lives
 
-| Rule | Where | Notes |
-|---|---|---|
-| 1. Due date from priority | `TicketRules.CalculateDueDate` | Always calculated from the original creation date, so changing priority on an open ticket recalculates rather than restarts the clock |
-| 2. Allowed status transitions | `TicketRules.AllowedFrom` | One method, one switch — the single authority on what is legal |
-| 3. In Progress requires an active agent | `Ticket.ChangeStatus` | Needs the agent's state, so it is checked where both objects are available |
-| 4. Inactive agents cannot be assigned | `Ticket.Assign` | |
-| 5. Closed tickets are read-only | `Ticket` | Guard at the top of every mutating method |
-| 6. Resolved/closed dates set by system | `Ticket.ChangeStatus` | Never accepted from the client |
-| 7. Overdue calculation | `Ticket` | Due date passed and status is neither Resolved nor Closed |
+| Rule | Where |
+|---|---|
+| 1. Due date comes from the priority | `TicketRules.CalculateDueDate` |
+| 2. Only certain status changes are allowed | `TicketRules.AllowedFrom` |
+| 3. A ticket needs an active agent before work starts | `Ticket.ChangeStatus` |
+| 4. An inactive agent cannot be assigned | `Ticket.Assign` |
+| 5. A closed ticket cannot be changed | Checked at the start of every method on `Ticket` |
+| 6. The system sets the resolved and closed dates | `Ticket.ChangeStatus` |
+| 7. A ticket is overdue if it is late and not finished | `Ticket.IsOverdue` |
 
-Controllers parse HTTP and map DTOs. They do not decide whether an operation is legal —
-they call a domain method, and that method either succeeds or throws.
+The web endpoints do not decide anything. They read the request, call a method
+on the ticket, and return the result. If a rule is broken, the ticket refuses
+and the endpoint turns that into an error message.
 
-### Why a dedicated status endpoint instead of a generic PATCH
+### Why status has its own endpoint
 
-A status change is a **state transition**, not a field update. It has its own preconditions
-(is this transition legal? is there an active agent?) and its own side effects (stamping
-`ResolvedAt` / `ClosedAt`). Flattening it into a generic update would mean:
+Changing a status is not the same as editing a field.
 
-- The API contract stops expressing that only certain transitions are valid
-- Rejecting an illegal transition returns the same shape as any other validation error,
-  so the caller cannot tell *why* it was rejected
-- A client could send status alongside unrelated fields, making the request's intent unclear
+It has its own conditions. You cannot move to In Progress without an active
+agent. You cannot move a closed ticket at all. It also has its own side
+effects, because the system has to record the date when a ticket is resolved
+or closed.
 
-A dedicated `POST /api/tickets/{id}/status` endpoint makes the operation explicit, gives it
-its own request shape, and lets it return a specific error explaining the rejected transition.
+If I had allowed status to be edited like any other field, all of that would
+be hidden inside a general update. The caller would also get the same vague
+error for a rejected status change as for a bad email address. A separate
+endpoint keeps the operation obvious and lets it return a clear reason when
+it says no.
 
-### Errors
+### Error messages
 
-Rule violations throw a domain exception carrying a machine-readable reason. A global
-exception handler translates these into RFC 7807 `ProblemDetails` responses — a rejected
-transition returns **409 Conflict** with an explanation of why it was rejected. Clients never
-receive a stack trace.
+When a rule is broken, the API returns a 409 with a sentence explaining what
+went wrong. For example: "cannot change status from New to Resolved".
+
+Bad input, like a missing title or an invalid email, returns a 400 listing the
+fields that are wrong.
+
+The user never sees a technical error page. Anything unexpected returns a plain
+message and the details go to the server log instead.
 
 ---
 
-## Assumptions
+## Assumptions I made
 
-- **`Comment.AuthorName` is free text, not a foreign key to `Agent`.** The assignment's data
-  model specifies "Author name" rather than an agent reference. This also allows comments from
-  customers, not just agents, and preserves the author's name as it was at the time of writing
-  even if an agent is later renamed or removed.
-- **No `Customer` entity.** The specification models customer name and email as fields on the
-  ticket, so customers are not stored separately.
-- **SLA durations are desk policy, not a property of the priority.** `TicketPriority` is a plain
-  enum; the durations live in `TicketRules` alongside the other rules. "High" does not
-  inherently mean one day — the support desk decided it does, and that policy could change.
-- **Enums are stored as strings in the database** rather than integers, so that reordering an
-  enum member can never silently reinterpret existing rows.
-- **All timestamps are UTC.** PostgreSQL `timestamptz` via Npgsql requires it, and it avoids
-  ambiguity around the due-date calculation.
-- **The list of currently allowed transitions is computed on the server** and returned as part
-  of the ticket response, so the UI can offer only legal actions without duplicating the rules.
-- **Reopening a ticket clears `ResolvedAt`.** The specification does not say what happens to the
-  resolved date when a ticket goes from Resolved back to In Progress. Since rule 6 makes the
-  system the owner of that field, leaving a stale value would misreport the ticket's current
-  state, so it is cleared on reopening.
-- **`Ticket.Reference` is generated outside the domain.** Producing `TCK-2026-0001` requires
-  knowing about other tickets, which means a database query. The domain has no database access
-  by design, so the reference is generated in the API layer and passed into the constructor.
-- **`AvailableTransitions()` accounts for rule 3, not just rule 2.** In Progress is only offered
-  when an active agent is assigned, so the UI never presents an action that the API would reject.
-- **No authentication.** Not requested, and out of scope for the time available.
+The task did not cover these, so I made a decision and wrote down why.
 
-## Design decisions
+**Reopening a ticket clears the resolved date.**
+The rules say the system owns the resolved date. If a ticket goes back to In
+Progress, it is not resolved any more, so keeping the old date would be
+misleading. I clear it.
 
-- **No generic repository over EF Core.** `DbContext` is already a Unit of Work and `DbSet<T>`
-  is already a repository. Wrapping them adds indirection and re-implements querying badly.
-- **No MediatR / CQRS, no AutoMapper.** At this size they add configuration and concepts
-  without reducing real complexity. DTO mapping is done explicitly so it is visible.
-- **Exceptions rather than a Result type** for rule violations. A Result type is arguably
-  cleaner, but it affects every method signature. Exceptions plus one global handler was the
-  better trade for the scope.
-- **DTOs at the API boundary.** EF entities are never returned directly, so a schema change is
-  not automatically a breaking API change.
-- **`switch` over if/else chains** for the rule methods, so each enum member appears explicitly —
-  `case TicketStatus.Closed:` documents that the terminal state was considered rather than
-  forgotten.
-- **`ChangeStatus` was not split into separate validate/apply/stamp methods.** At around twenty
-  lines it reads top to bottom as guard, apply, stamp; splitting it would mean jumping between
-  three methods to follow one operation. The one piece that *was* extracted, `HasActiveAgent()`,
-  was extracted because it has two callers — the guard and `AvailableTransitions()` — so the
-  rule stays in a single place.
-- **Every mutating method takes `now` as a parameter** rather than calling `DateTime.UtcNow`
-  internally. This is what makes the due-date and timestamp rules testable without waiting for
-  real time to pass.
+**The comment author is just a name, not a link to an agent.**
+The task lists "author name" for a comment. I also think customers reply on
+their own tickets, not only agents, so tying it to an agent record would block
+that. Keeping the name also means the comment still reads correctly if an agent
+later leaves.
+
+**A closed ticket can still be deleted.**
+Rule 5 says a closed ticket cannot be edited. Deleting is not editing, and the
+task asks for delete with a confirmation step, so I allowed it.
+
+**The due date times are a support desk policy, not part of the priority.**
+"High" does not automatically mean one day. The support desk decided that it
+does, and they could change it later. So I kept those times with the other
+rules rather than attaching them to the priority itself.
+
+**The ticket reference is created by the API.**
+Making `TCK-2026-0001` means checking which references already exist, and that
+needs the database. The rules project is not allowed to touch the database, so
+the API creates the reference and hands it over.
+
+**The server tells the frontend which status changes are allowed.**
+Every ticket response includes a list of the status changes that are currently
+possible. The frontend draws one button per item in that list. This means the
+frontend never contains a copy of the rules, and it can never offer a button
+that the server would reject.
 
 ---
 
-## What I would improve or add with more time
+## About the tests
 
-- Authentication and authorisation, with the acting agent taken from the token rather than the
-  request body.
-- Integration tests covering the endpoints end to end, in addition to the domain unit tests.
-- A `docker-compose.yaml` for the database so setup is one command and does not depend on a
-  local Postgres install or a particular port.
-- Optimistic concurrency on tickets, so two agents changing status simultaneously cannot
-  overwrite one another.
-- Structured logging and correlation IDs.
-- Pagination metadata on the frontend (page size selection, jump to page).
-- Better accessibility on the Angular pages — proper focus management in dialogs and ARIA
-  labelling on the status controls.
+There are 4 backend tests and 2 frontend tests. I kept the number small on
+purpose and made each one cover a real risk rather than repeating the code.
 
-## Time taken
+The four backend tests are:
 
-_TBC_
+1. Only the four allowed status changes work, nothing can move once closed,
+   and a ticket cannot skip ahead.
+2. The due date matches the priority, and changing the priority recalculates
+   from the original creation date rather than from today.
+3. Work cannot start without an active agent, including the case where the
+   agent was active when assigned and was deactivated afterwards.
+4. The system sets the resolved and closed dates itself, reopening clears the
+   resolved date, and a closed ticket refuses every kind of change.
+
+The two frontend tests check that searching and filtering happen on the server
+rather than in the browser, and that typing in the search box waits until you
+stop typing instead of sending a request per letter.
+
+---
+
+## What I would do with more time
+
+- Add a login, so the person acting on a ticket is known instead of typed in.
+- Add tests that go through the real endpoints, not only the rules.
+- Add a Docker file for the database so setup does not depend on the port being free.
+- Handle two agents changing the same ticket at the same moment.
+- Improve the look of the frontend. I kept it plain on purpose so I could spend
+  the time on the rules, which is what the task said it was grading.
+
+---
+
+## How long it took
+
+Around 24 hours.
