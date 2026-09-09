@@ -1,1 +1,101 @@
-<p>ticket-detail works!</p>
+<p><a routerLink="/tickets">&larr; Back to tickets</a></p>
+
+<p *ngIf="loading" class="muted">Loading...</p>
+
+<div *ngIf="ticket">
+
+  <h1>{{ticket.reference}} &mdash; {{ticket.title}}</h1>
+
+  <p *ngIf="ticket.isReadOnly" class="error">
+    This ticket is closed and is read-only.
+  </p>
+
+  <p *ngIf="errorMessage" class="error">{{errorMessage}}</p>
+
+  <table class="details">
+    <tbody>
+      <tr><th>Status</th><td>{{ticket.status}}</td></tr>
+      <tr><th>Priority</th><td>{{ticket.priority}}</td></tr>
+      <tr><th>Customer</th><td>{{ticket.customerName}} ({{ticket.customerEmail}})</td></tr>
+      <tr><th>Agent</th><td>{{ticket.assignedAgentName||'Unassigned'}}</td></tr>
+      <tr>
+        <th>Due</th>
+        <td>
+          {{ticket.dueAt|date:'dd MMM yyyy HH:mm'}}
+          <span *ngIf="ticket.isOverdue" class="error">(overdue)</span>
+        </td>
+      </tr>
+      <tr><th>Created</th><td>{{ticket.createdAt|date:'dd MMM yyyy HH:mm'}}</td></tr>
+      <tr><th>Last modified</th><td>{{ticket.lastModifiedAt|date:'dd MMM yyyy HH:mm'}}</td></tr>
+      <tr *ngIf="ticket.resolvedAt"><th>Resolved</th><td>{{ticket.resolvedAt|date:'dd MMM yyyy HH:mm'}}</td></tr>
+      <tr *ngIf="ticket.closedAt"><th>Closed</th><td>{{ticket.closedAt|date:'dd MMM yyyy HH:mm'}}</td></tr>
+      <tr><th>Description</th><td>{{ticket.description}}</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Actions</h2>
+
+  <p *ngIf="ticket.availableTransitions.length===0" class="muted">
+    No status changes are available for this ticket.
+  </p>
+
+  <p>
+    <button
+      *ngFor="let s of ticket.availableTransitions"
+      (click)="changeStatus(s)"
+      [disabled]="ticket.isReadOnly">
+      Move to {{s}}
+    </button>
+  </p>
+
+  <p>
+    <label for="agent">Assigned agent</label>
+    <select id="agent" [(ngModel)]="selectedAgentId" [disabled]="ticket.isReadOnly">
+      <option [ngValue]="null">Unassigned</option>
+      <option *ngFor="let a of agents" [ngValue]="a.id" [disabled]="!a.isActive">
+        {{a.fullName}}<span *ngIf="!a.isActive"> (inactive)</span>
+      </option>
+    </select>
+    <button (click)="assign()" [disabled]="ticket.isReadOnly||selectedAgentId===null">Assign</button>
+    <button (click)="unassign()" [disabled]="ticket.isReadOnly||!ticket.assignedAgentId">Unassign</button>
+  </p>
+
+  <p>
+    <a [routerLink]="['/tickets',ticket.id,'edit']" *ngIf="!ticket.isReadOnly">Edit ticket</a>
+    <button (click)="deleteTicket()">Delete ticket</button>
+  </p>
+
+  <h2>Comments ({{ticket.comments.length}})</h2>
+
+  <p *ngIf="ticket.comments.length===0" class="muted">No comments yet.</p>
+
+  <table *ngIf="ticket.comments.length>0">
+    <thead>
+      <tr><th>Author</th><th>Comment</th><th>When</th></tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let c of ticket.comments">
+        <td>{{c.authorName}}</td>
+        <td>{{c.body}}</td>
+        <td>{{c.createdAt|date:'dd MMM yyyy HH:mm'}}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Add a comment</h3>
+
+  <div *ngIf="ticket.isReadOnly" class="muted">
+    Comments cannot be added to a closed ticket.
+  </div>
+
+  <div *ngIf="!ticket.isReadOnly" class="comment-form">
+    <label for="author">Your name</label>
+    <input id="author" type="text" [(ngModel)]="commentAuthor">
+
+    <label for="body">Comment</label>
+    <textarea id="body" rows="3" [(ngModel)]="commentBody"></textarea>
+
+    <p><button (click)="addComment()">Add comment</button></p>
+  </div>
+
+</div>

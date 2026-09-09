@@ -1,0 +1,4 @@
+.filters{margin-bottom:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.filters input[type=text]{width:260px}
+.inline{display:inline;margin:0}
+.paging{margin-top:12px;display:flex;gap:12px;align-items:center}

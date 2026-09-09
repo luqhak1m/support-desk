@@ -1,1 +1,52 @@
-/* You can add global styles to this file, and also import other style files */
+/* Minimal global styles. Plain white, system font, no framework. */
+
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  background:#fff;
+  color:#222;
+  font-family:Arial,Helvetica,sans-serif;
+  font-size:14px;
+  line-height:1.5;
+}
+
+h1{font-size:20px;margin:0 0 16px 0}
+h2{font-size:16px;margin:24px 0 8px 0}
+h3{font-size:14px;margin:0 0 8px 0}
+
+a{color:#0645ad}
+
+table{border-collapse:collapse;width:100%}
+th,td{border:1px solid #ccc;padding:6px 8px;text-align:left;vertical-align:top}
+th{background:#f2f2f2;font-weight:bold}
+
+input,select,textarea{
+  font-family:inherit;
+  font-size:14px;
+  padding:4px 6px;
+  border:1px solid #999;
+  background:#fff;
+  color:#222;
+}
+
+button{
+  font-family:inherit;
+  font-size:14px;
+  padding:4px 10px;
+  border:1px solid #999;
+  background:#f2f2f2;
+  color:#222;
+  cursor:pointer;
+}
+
+button:disabled{color:#999;cursor:not-allowed}
+
+label{display:block;margin-bottom:2px}
+
+/* an overdue ticket row */
+.overdue{background:#ffe6e6}
+
+.error{color:#a00}
+.muted{color:#666}
+.success{color:#060}

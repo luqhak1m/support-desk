@@ -1,1 +1,69 @@
-<p>ticket-list works!</p>
+<h1>Tickets</h1>
+
+<div class="filters">
+  <input
+    type="text"
+    placeholder="Search reference, title or customer"
+    (input)="onSearchInput($any($event.target).value)">
+
+  <select [(ngModel)]="status" (change)="onFilterChange()">
+    <option value="">All statuses</option>
+    <option *ngFor="let s of statuses" [value]="s">{{s}}</option>
+  </select>
+
+  <select [(ngModel)]="priority" (change)="onFilterChange()">
+    <option value="">All priorities</option>
+    <option *ngFor="let p of priorities" [value]="p">{{p}}</option>
+  </select>
+
+  <select [(ngModel)]="agentId" (change)="onFilterChange()">
+    <option [ngValue]="null">All agents</option>
+    <option *ngFor="let a of agents" [ngValue]="a.id">{{a.fullName}}</option>
+  </select>
+
+  <label class="inline">
+    <input type="checkbox" [(ngModel)]="overdueOnly" (change)="onFilterChange()">
+    Overdue only
+  </label>
+</div>
+
+<p *ngIf="loading" class="muted">Loading...</p>
+<p *ngIf="errorMessage" class="error">{{errorMessage}}</p>
+
+<p *ngIf="!loading && !errorMessage && tickets.length===0" class="muted">
+  No tickets match these filters.
+</p>
+
+<table *ngIf="!loading && tickets.length>0">
+  <thead>
+    <tr>
+      <th>Reference</th>
+      <th>Title</th>
+      <th>Customer</th>
+      <th>Priority</th>
+      <th>Status</th>
+      <th>Agent</th>
+      <th>Due</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr *ngFor="let t of tickets" [class.overdue]="t.isOverdue">
+      <td><a [routerLink]="['/tickets',t.id]">{{t.reference}}</a></td>
+      <td>{{t.title}}</td>
+      <td>{{t.customerName}}</td>
+      <td>{{t.priority}}</td>
+      <td>{{t.status}}</td>
+      <td>{{t.assignedAgentName||'-'}}</td>
+      <td>
+        {{t.dueAt|date:'dd MMM yyyy HH:mm'}}
+        <span *ngIf="t.isOverdue" class="error">(overdue)</span>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="paging" *ngIf="totalPages>0">
+  <button (click)="previousPage()" [disabled]="page===1">Previous</button>
+  <span class="muted">Page {{page}} of {{totalPages}} &mdash; {{totalCount}} tickets</span>
+  <button (click)="nextPage()" [disabled]="page===totalPages">Next</button>
+</div>

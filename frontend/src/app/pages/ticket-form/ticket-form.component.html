@@ -1,1 +1,35 @@
-<p>ticket-form works!</p>
+<p><a routerLink="/tickets">&larr; Back to tickets</a></p>
+
+<h1>{{isEdit?'Edit ticket':'New ticket'}}</h1>
+
+<p *ngIf="errorMessage" class="error">{{errorMessage}}</p>
+
+<form [formGroup]="form" (ngSubmit)="save()" class="ticket-form">
+
+  <label for="title">Title</label>
+  <input id="title" type="text" formControlName="title">
+  <p class="error" *ngIf="showError('title')">A title is required (200 characters max).</p>
+
+  <label for="description">Description</label>
+  <textarea id="description" rows="4" formControlName="description"></textarea>
+  <p class="error" *ngIf="showError('description')">A description is required.</p>
+
+  <label for="customerName">Customer name</label>
+  <input id="customerName" type="text" formControlName="customerName">
+  <p class="error" *ngIf="showError('customerName')">A customer name is required.</p>
+
+  <label for="customerEmail">Customer email</label>
+  <input id="customerEmail" type="text" formControlName="customerEmail">
+  <p class="error" *ngIf="showError('customerEmail')">A valid email address is required.</p>
+
+  <label for="priority">Priority</label>
+  <select id="priority" formControlName="priority">
+    <option *ngFor="let p of priorities" [value]="p">{{p}}</option>
+  </select>
+  <p class="muted">The due date is calculated by the server from the priority.</p>
+
+  <p>
+    <button type="submit" [disabled]="saving">{{isEdit?'Save changes':'Create ticket'}}</button>
+  </p>
+
+</form>

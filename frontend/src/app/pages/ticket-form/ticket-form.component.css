@@ -1,0 +1,4 @@
+.ticket-form{max-width:500px}
+.ticket-form input,.ticket-form textarea,.ticket-form select{width:100%;margin-bottom:4px}
+.ticket-form label{margin-top:10px}
+.ticket-form p{margin:2px 0 0 0}
