@@ -154,6 +154,18 @@ public class Ticket
         LastModifiedAt=now;
     }
 
+    // 5. A closed ticket is read-only - editable fields go through here so the guard cannot be skipped
+    public void UpdateDetails(string title, string description, string customerName, string customerEmail, DateTime now)
+    {
+        EnsureNotClosed();
+
+        Title=title;
+        Description=description;
+        CustomerName=customerName;
+        CustomerEmail=customerEmail;
+        LastModifiedAt=now;
+    }
+
     public void AddComment(string authorName, string body, DateTime now)
     {
         // 5. A closed ticket is read-only — no edits, no status changes, no new comments.
